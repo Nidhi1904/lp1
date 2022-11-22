@@ -1,0 +1,334 @@
+
+#include <bits/stdc++.h>
+using namespace std;
+struct Process
+{
+    int pid;
+    int at;       // Arrritval Time
+    int bt;       // Burst Time
+    int st;       // Start Time
+    int ct;       // Completion Time
+    int tat;      // Turn Around Time
+    int wt;       // Waiting Time
+    int priority; // Priority of Process
+};
+
+struct BtAt // For RR
+{
+    int at;
+    int bt;
+};
+
+bool compareAT(Process p1, Process p2)
+{
+    return p1.at < p2.at;
+}
+bool comparePID(Process p1, Process p2)
+{
+    return p1.pid < p2.pid;
+}
+
+bool compareBtAT(BtAt p1, BtAt p2) // For RR
+{
+    return p1.at < p2.at;
+}
+class Scheduling
+{
+public:
+    struct Process p[100];
+    struct BtAt b[100];
+
+    int bt_remain_sjf[100];
+    int bt_remain_rr[100];
+
+    float fcfsTAT = 0, fcfsWT = 0, sjfTAT = 0, rrTAT = 0, ppTAT = 0, ppWT = 0, rrWT = 0, sjfWT = 0;
+
+    int n;
+    int tq = 2; // Time Quant
+
+    void Input()
+    {
+
+        cout << "Enter Number Of Processes" << endl;
+        cin >> n;
+
+        for (auto i = 0; i < n; i++)
+        {
+            cout << "Enter AT of Process " << i + 1 << " : ";
+            auto att = 0;
+            cin >> att;
+            p[i].at = att;
+            b[i].at = att;
+
+            cout << "Enter BT of Process " << i + 1 << " : ";
+            int btt;
+            cin >> btt;
+            p[i].bt = btt;
+            b[i].bt = btt;
+            bt_remain_sjf[i] = btt;
+            // bt_remain_rr[i] = btt;
+            cout << "Enter Priority of Process " << i + 1 << " : ";
+            int pr;
+            cin >> pr;
+            p[i].priority = pr;
+        }
+
+        cout << endl;
+        cout << "Enter Time Quantum" << endl;
+        cin >> tq;
+    }
+
+    void FCFS()
+    {
+        sort(p, p + n, compareAT);
+        for (int i = 0; i < n; i++)
+        {
+            if (i == 0)
+            {
+                p[i].st = p[i].at;
+            }
+            else
+            {
+                p[i].st = max(p[i].at, p[i - 1].ct);
+            }
+
+            p[i].ct = p[i].st + p[i].bt;
+            p[i].tat = p[i].ct - p[i].at; // Calculating Turn Around Time
+            p[i].wt = p[i].tat - p[i].bt; // Calculationg Waiting Time
+            // For Avg TAT and WT
+            fcfsTAT += p[i].tat;
+            fcfsWT += p[i].wt;
+        }
+        sort(p, p + n, comparePID);
+    }
+    void SJF()
+    {
+        int isCompleted[100] = {0};
+        int current_Time = 0;
+        int completed = 0;
+        while (completed != n)
+        {
+            int index = -1;
+            int minn = INT_MAX;
+            for (auto i = 0; i < n; i++)
+            {
+                if (p[i].at <= current_Time && isCompleted[i] == 0)
+                {
+                    if (bt_remain_sjf[i] <= minn)
+                    {
+                        index = i;
+                        minn = bt_remain_sjf[i];
+                    }
+                    if (bt_remain_sjf[i] == minn)
+                    {
+                        if (p[i].at < p[index].at)
+                        {
+                            minn = bt_remain_sjf[i];
+                            index = i;
+                        }
+                    }
+                }
+            }
+            if (index != -1)
+            {
+                if (bt_remain_sjf[index] == p[index].bt)
+                {
+                    p[index].st = current_Time;
+                }
+
+                bt_remain_sjf[index] -= 1;
+                current_Time++;
+
+                if (bt_remain_sjf[index] == 0)
+                {
+                    p[index].ct = current_Time;
+                    p[index].tat = p[index].ct - p[index].at;
+                    p[index].wt = p[index].tat - p[index].bt;
+
+                    sjfTAT += p[index].tat;
+                    sjfWT += p[index].wt;
+
+                    isCompleted[index] = 1;
+                    completed++;
+                    cout << p[index].pid << " -> "
+                         << " ";
+                }
+            }
+            else
+            {
+                current_Time++;
+            }
+        }
+    }
+    void RR()
+    {
+        sort(p, p + n, compareAT);
+        sort(b, b + n, compareBtAT);
+        int index;
+        queue<int> q;
+        int current_time = 0;
+        q.push(0);
+        int completed = 0;
+        int isCompleted[100] = {0};
+
+        isCompleted[0] = 1;
+
+        while (completed != n)
+        {
+            index = q.front();
+            q.pop();
+
+            if (b[index].bt == p[index].bt)
+            {
+                p[index].st = max(current_time, p[index].at);
+                current_time = p[index].st;
+            }
+            if (b[index].bt - tq > 0)
+            {
+                b[index].bt = b[index].bt - tq;
+                current_time = current_time + tq;
+            }
+            else
+            {
+                current_time += b[index].bt;
+                b[index].bt = 0;
+                completed++;
+
+                p[index].ct = current_time;
+                p[index].tat = p[index].ct - p[index].at;
+                p[index].wt = p[index].tat - p[index].bt;
+
+                rrTAT += p[index].tat;
+                rrWT += p[index].wt;
+            }
+
+            for (int i = 1; i < n; i++)
+            {
+                if (b[i].bt > 0 && p[i].at <= current_time && isCompleted[i] == 0)
+                {
+                    q.push(i);
+                    isCompleted[i] = 1;
+                }
+            }
+            if (b[index].bt > 0)
+            {
+                q.push(index);
+            }
+            if (q.empty())
+            {
+                for (int i = 1; i < n; i++)
+                {
+                    if (b[i].bt > 0)
+                    {
+                        q.push(i);
+                        isCompleted[i] = 1;
+                        break;
+                    }
+                }
+            }
+        }
+        sort(p, p + n, comparePID);
+    }
+
+    void PSA()
+    {
+        int isCompleted[100] = {0};
+
+        int current_time = 0;
+        int completed = 0;
+
+        while (completed != n)
+        {
+            int index = -1;
+            int mx = -1;
+
+            for (int i = 0; i < n; i++)
+            {
+                if (p[i].at <= current_time && isCompleted[i] == 0)
+                {
+                    if (p[i].priority > mx)
+                    {
+                        mx = p[i].priority;
+                        index = i;
+                    }
+                    if (p[i].priority == mx)
+                    {
+                        if (p[i].at < p[index].at)
+                        {
+                            mx = p[i].priority;
+                            index = i;
+                        }
+                    }
+                }
+            }
+            if (index != -1)
+            {
+                p[index].st = current_time;
+                p[index].ct = p[index].st + p[index].bt;
+                p[index].tat = p[index].ct - p[index].at;
+                p[index].wt = p[index].tat - p[index].bt;
+
+                ppTAT += p[index].tat;
+                ppWT += p[index].wt;
+
+                isCompleted[index] = 1;
+                completed++;
+                current_time = p[index].ct;
+            }
+            else
+            {
+                current_time++;
+            }
+        }
+    }
+
+    void display()
+    {
+        cout << "-----------------------------------------------------------\n";
+        cout << "\tAverage Turn-Around and Waiting Time\n\n";
+        int colWidth = 26;
+        // table header
+        cout << setfill('*') << setw(3 * colWidth) << "*" << endl;
+        cout << setfill(' ') << fixed;
+        cout << setw(colWidth) << "Scheduling Algorithms " << setw(colWidth)
+             << " Average Turn-Around Time " << setw(colWidth)
+             << " Average Waiting Time " << endl;
+        cout << setfill('*') << setw(3 * colWidth) << "*" << endl;
+        cout << setfill(' ') << fixed;
+        cout << setw(colWidth) << "FCFS "
+             << setw(colWidth) << fcfsTAT / n << setw(colWidth) << fcfsWT / n << endl;
+        cout << setw(colWidth) << "SJF "
+             << setw(colWidth) << sjfTAT / n << setw(colWidth) << sjfWT / n << endl;
+        cout << setw(colWidth) << "RR "
+             << setw(colWidth) << rrTAT / n << setw(colWidth) << rrWT / n << endl;
+        cout << setw(colWidth) << "Priority "
+             << setw(colWidth) << ppTAT / n << setw(colWidth) << ppWT / n << endl;
+    }
+};
+
+int main()
+{
+
+    Scheduling s;
+    s.Input();
+    s.SJF();
+    s.FCFS();
+    s.RR();
+    s.PSA();
+
+    s.display();
+    // s.PSA();
+    // cout << s. pppTAT/ s.n << " " << s.pppWT / s.n << endl;
+}
+// Input for FCFS : 5  3 4 0   5 3 0  0 2 0   5 1 0   5 3 0
+// // Input for FCFS : 3  0 2 0   3 1 0   5 6 0
+// // Input for FCFS : 4  0 2 0   1 2 0   5 3 0  6 4 0
+// // 5  4 5 0  6 4 0   0 3 0   6 2 0   5 4 0
+// 3  0 5 0   3 9 0   6 6 0
+
+// sjf
+// 5  2 6 0   5 2 0   1 8 0  0 3 0   4 4 0
+//  5  2 6  5 2  1 8  0 3  4 4
+// 5    2 1 0   1 5 0  4 1 0   0 6 0    2 3 0    sjf : 6.6 & 3.4  fcfs : 10.2 & 7  rr : 10 &  6.8  pr  : 10.2 & 7.0
+// 5 2   1 5  4 1 0 6 2 3
+// 5

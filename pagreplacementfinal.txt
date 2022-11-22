@@ -1,0 +1,260 @@
+#include <iostream>
+using namespace std;
+class page_rep
+{
+public:
+    string pagestring;
+    int frames;
+    void fifo()
+    {
+        int hit = 0, miss = 0;
+        int memory[frames], position = 0;
+        char hitorfault[frames];
+        for (int i = 0; i < frames; i++)
+            memory[i] = -1;
+        cout << "FIFO:" << endl;
+        for (int i = 0; i < pagestring.length(); i++)
+        {
+            int curr = pagestring[i] - 48;
+            int flag = 0;
+            for (int j = 0; j < frames; j++)
+            {
+                if (curr == memory[j])
+                    flag = 1;
+            }
+            if (flag == 1)
+            {
+                hit++;
+                hitorfault[i] = 'H';
+            }
+            else
+            {
+                hitorfault[i] = 'F';
+                miss++;
+                memory[position] = curr;
+                position++;
+                if (position == frames)
+                    position = 0;
+            }
+            for (int j = 0; j < frames; j++)
+
+            {
+                cout << memory[j] << "|";
+            }
+            cout << hitorfault[i];
+            cout << endl;
+        }
+        cout << "FIFO Hits : " << hit << endl;
+        cout << "FIFO Miss : " << miss << endl;
+    }
+    void lru()
+    {
+        int memory[frames];
+        for (int i = 0; i < frames; i++)
+        {
+            memory[i] = -1;
+        }
+        int hit = 0, faults = 0;
+        int position = 0;
+        for (int i = 0; i < pagestring.length(); i++)
+        {
+            int flag = 0;
+            int maxposition[frames];
+            for (int d = 0; d < frames; d++)
+                maxposition[d] = 0;
+            for (int j = 0; j < frames; j++)
+            {
+                if (memory[j] == pagestring[i] - 48)
+                {
+                    flag = 1;
+                }
+            }
+            if (flag == 1)
+            {
+                hit++;
+            }
+            else
+            {
+                int index = frames - 1;
+                faults++;
+                if (position < frames)
+                {
+                    memory[position] = pagestring[i] - 48;
+                    position++;
+                }
+                else
+                {
+                    for (int v = 0; v < frames; v++)
+                    {
+                        for (int f = i - 1; f >= 0; f--)
+                        {
+                            if (memory[v] == pagestring[f] - 48)
+                            {
+                                maxposition[index] = f;
+                                // cout<<maxposition[index]<<" ";
+                                break;
+                            }
+                        }
+                        // cout<<endl;
+                        index--;
+                    }
+                    // int maxi = 0;
+                    int mini = INT_MAX;
+                    int final = 0;
+                    for (int b = 0; b < frames; b++)
+                    {
+                        // maxi = max(maxi, maxposition[b]);
+                        mini = min(maxposition[b], mini);
+                        // cout<<mini<<"mini";
+                    }
+
+                    // cout<<mini<<endl;
+                    for (int b = 0; b < frames; b++)
+                    {
+                        if (maxposition[b] == mini)
+                        {
+                            // cout<<maxposition[b]<<endl;
+                            memory[frames - b - 1] = pagestring[i] - 48;
+                            break;
+                        }
+                    }
+                }
+            }
+            for (int p = 0; p < frames; p++)
+            {
+                cout << memory[p] << "|";
+            }
+            cout << endl;
+        }
+        cout << "Total hits are " << hit << endl;
+        cout << "Total faults are " << faults << endl;
+    }
+    void optimal()
+    {
+        int memory[frames];
+        for (int i = 0; i < frames; i++)
+        {
+            memory[i] = -1;
+        }
+        int hit = 0, faults = 0;
+        int position = 0;
+        for (int i = 0; i < pagestring.length(); i++)
+        {
+            int flag = 0;
+            int maxposition[frames];
+            for (int d = 0; d < frames; d++)
+                maxposition[d] = 0;
+            for (int j = 0; j < frames; j++)
+            {
+                if (memory[j] == pagestring[i] - 48)
+                {
+                    flag = 1;
+                }
+            }
+            if (flag == 1)
+            {
+                hit++;
+            }
+            else
+            {
+                int index = 0;
+                faults++;
+                if (position < frames)
+                {
+                    memory[position] = pagestring[i] - 48;
+                    position++;
+                }
+                else
+                {
+                    for (int v = 0; v < frames; v++)
+                    {
+                        for (int f = i + 1; f < pagestring.length(); f++)
+                        {
+                            if (memory[v] == pagestring[f] - 48)
+                            {
+                                maxposition[index] = f;
+                                // cout<<maxposition[index]<<" ";
+                                break;
+                            }
+                        }
+                        index++;
+                    }
+                    int maxi = 0;
+                    int mini = INT_MAX;
+                    for (int b = 0; b < frames; b++)
+                    {
+                        maxi = max(maxi, maxposition[b]);
+                        mini = min(maxposition[b], mini);
+                    }
+                    if (mini == 0)
+                    {
+                        for (int b = 0; b < frames; b++)
+                        {
+                            if (maxposition[b] == 0)
+                            {
+                                memory[b] = pagestring[i] - 48;
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        for (int b = 0; b < frames; b++)
+                        {
+                            if (maxposition[b] == maxi)
+                            {
+                                memory[b] = pagestring[i] - 48;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            for (int p = 0; p < frames; p++)
+            {
+                cout << memory[p] << "|";
+            }
+            cout << endl;
+        }
+        cout << "Total hits are " << hit << endl;
+        cout << "Total faults are " << faults << endl;
+    }
+};
+
+int main()
+{
+    page_rep obj;
+    int choice, n;
+    while (true)
+    {
+        cout << "\n------------Menu-------------\n1.FIFO\n2.OPTIMAL \n3. LRU \n4.EXIT\nEnter your choice:\n----------------------------- \n";
+        cin >> choice;
+        switch (choice)
+        {
+        case 1:
+            cout << "Enter the page string : " << endl;
+            cin >> obj.pagestring;
+            cout << "Enter the number of frames size : " << endl;
+            cin >> obj.frames;
+            obj.fifo();
+            break;
+        case 2:
+            cout << "Enter the page string : " << endl;
+            cin >> obj.pagestring;
+            cout << "Enter the number of frames size : " << endl;
+            cin >> obj.frames;
+            obj.optimal();
+            break;
+        case 3:
+            cout << "Enter the page string : " << endl;
+            cin >> obj.pagestring;
+            cout << "Enter the number of frames size : " << endl;
+            cin >> obj.frames;
+            obj.lru();
+            break;
+        case 4:
+            cout << "Thank you!" << endl;
+            exit(0);
+        }
+    }
+}
